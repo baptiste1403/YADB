@@ -29,6 +29,7 @@
 *.dylib
 
 # Executables
+build/
 *.exe
 *.out
 *.app
@@ -50,3 +51,9 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# YADB files
+*.yadb
+
+# vscode config
+.vscode/
