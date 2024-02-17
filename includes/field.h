@@ -19,6 +19,6 @@ typedef struct {
     size_t offset;
 } field_metadata_t;
 
-char* to_string_type(type_t type);
+const char* to_string_type(type_t type);
 
 #endif // __FIELD__

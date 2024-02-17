@@ -5,7 +5,10 @@ mini sgbd for education purposes
  - [x] create a table
  - [x] create a row of data for a given table 
  - [x] Save/load metadata of tables
- - [ ] Save/load data from a given table
+ - [x] Proper logging system 
+ - [x] Save/load all data from a given table
+ - [ ] Handle file position of error for functions
+ - [ ] Handle file integrity on insert/save errors
  - [ ] Basic query system lib
  - [ ] Basic constraints for fields
  - [ ] Basic SQL client to create table and query data

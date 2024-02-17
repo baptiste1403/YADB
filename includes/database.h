@@ -5,23 +5,23 @@
 #include <stdio.h>
 #include <string.h>
 #include "table.h"
+#include "logger.h"
+#include "errno.h"
+#include "list.h"
+#include "defer.h"
 
 #define TABLE_METADATA_FILE "tables_metadatas.yadb"
 
 typedef struct {
-    size_t nb_table;
-    table_metadata_t* tables;
+    size_t count;
+    size_t capacity;
+    table_metadata_t* items;
 } database_t;
 
-typedef struct {
-    table_metadata_t* table;
-    size_t nb_field_set;
-} table_builder_t;
-
-void init_table(table_builder_t* builder, const char* name, size_t nb_fields);
-int set_field(table_builder_t* builder, const char* name, type_t type, size_t size);
-int get_table(table_builder_t* builder, table_metadata_t* dest);
+table_metadata_t* create_table(database_t* db, char* name);
+table_metadata_t* get_table(database_t* db, const char* name);
 int save_database(database_t* database);
 int load_database(database_t* database);
+void free_database(database_t* database);
 
 #endif // __DATABASE__

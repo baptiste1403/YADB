@@ -5,48 +5,59 @@
 #include <string.h>
 #include "database.h"
 #include "row.h"
-
-
-// --------- MAIN ---------
+#include "logger.h"
 
 int main(int argc, char **argv) {
 
+    (void)argc;
+    (void)argv;
+
     database_t database = {0};
-    database.nb_table = 1;
-    database.tables = (table_metadata_t*)malloc(sizeof(table_metadata_t));
 
-    table_builder_t builder = {0};
-    init_table(&builder, "Person", 3);
-    if(set_field(&builder, "id", INTEGER, 8) < 0) return EXIT_FAILURE;
-    if(set_field(&builder, "age", INTEGER, 8) < 0) return EXIT_FAILURE;
-    if(set_field(&builder, "name", STRING, 50) < 0) return EXIT_FAILURE;
-    get_table(&builder, &database.tables[0]);
+    table_metadata_t* table = create_table(&database, "person");
 
-    puts("\ncreate and dump rows :\n");
+    if(add_field(table, "id", INTEGER, 8) < 0) return EXIT_FAILURE;
+    if(add_field(table, "age", INTEGER, 8) < 0) return EXIT_FAILURE;
+    if(add_field(table, "name", STRING, 50) < 0) return EXIT_FAILURE;
 
-    row_t person_row[2];
-    person_row[0] = create_table_row(&database.tables[0]);
-    person_row[1] = create_table_row(&database.tables[0]);
+    row_list_t row_list = {0};
+    row_list.table = get_table(&database, "person");
+    add_row(&row_list);
+    add_row(&row_list);
+
+    log_message(LOG_INFO, "create and dump items :\n");
+
+
 
     // this is bad, you must verify return type !!!
-    put_string(&person_row[0], "name", "Jean BON");
-    put_string(&person_row[1], "name", "Guy LIGUILY");
-    put_integer(&person_row[0], "age", 35);
-    put_integer(&person_row[1], "age", 47);
-    put_integer(&person_row[0], "id", 0);
-    put_integer(&person_row[1], "id", 1);
+    put_string(&row_list, 0, "name", "Jean BON");
+    put_string(&row_list, 1, "name", "Guy LIGUILY");
+    put_integer(&row_list, 0, "age", 35);
+    put_integer(&row_list, 1, "age", 47);
+    put_integer(&row_list, 0, "id", 0);
+    put_integer(&row_list, 1, "id", 1);
 
-    dump_rows(person_row, 2);
+    //dump_rows(person_row, 2);
 
-    puts("\nsave/load and dump database :\n");
+    insert_rows(&row_list);
+
+    free_row_list(&row_list);
+
+    load_rows(&row_list, get_table(&database, "person"));
+
+    dump_rows(&row_list);
+
+    log_message(LOG_INFO, "save/load and dump database :\n");
 
     save_database(&database);
 
-    database = (database_t){0};
+    free_database(&database);
 
     load_database(&database);
 
-    dump_table_metadata(&database.tables[0]);
+    dump_table_metadata(&database.items[0]);
+
+    free_database(&database);
 
     return EXIT_SUCCESS;
 }
