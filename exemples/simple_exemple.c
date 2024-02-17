@@ -16,9 +16,9 @@ int main(int argc, char **argv) {
 
     table_metadata_t* table = create_table(&database, "person");
 
-    if(add_field(table, "id", INTEGER, 8) < 0) return EXIT_FAILURE;
-    if(add_field(table, "age", INTEGER, 8) < 0) return EXIT_FAILURE;
-    if(add_field(table, "name", STRING, 50) < 0) return EXIT_FAILURE;
+    add_field(table, "id", INTEGER, 8);
+    add_field(table, "age", INTEGER, 8);
+    add_field(table, "name", STRING, 50);
 
     row_list_t row_list = {0};
     row_list.table = get_table(&database, "person");
@@ -26,8 +26,6 @@ int main(int argc, char **argv) {
     add_row(&row_list);
 
     log_message(LOG_INFO, "create and dump items :\n");
-
-
 
     // this is bad, you must verify return type !!!
     put_string(&row_list, 0, "name", "Jean BON");

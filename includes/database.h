@@ -18,10 +18,17 @@ typedef struct {
     table_metadata_t* items;
 } database_t;
 
-table_metadata_t* create_table(database_t* db, char* name);
+table_metadata_t* _create_table(database_t* db, char* name, const char* file, size_t line);
+#define create_table(db, name) _create_table(db, name, __FILE__, __LINE__)
+
 table_metadata_t* get_table(database_t* db, const char* name);
-int save_database(database_t* database);
-int load_database(database_t* database);
+
+int _save_database(database_t* database, const char* file, size_t line);
+#define save_database(database) _save_database(database, __FILE__, __LINE__)
+
+int _load_database(database_t* database, const char* file, size_t line);
+#define load_database(database) _load_database(database, __FILE__, __LINE__)
+
 void free_database(database_t* database);
 
 #endif // __DATABASE__

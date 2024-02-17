@@ -1,8 +1,8 @@
 #include "database.h"
 
-table_metadata_t* create_table(database_t* db, char* name) {
+table_metadata_t* _create_table(database_t* db, char* name, const char* file, size_t line) {
     if(get_table(db, name) != NULL) {
-        log_message(LOG_ERROR, "table '%s' already exist", name);
+        _log_message(LOG_ERROR, file, line, "table '%s' already exist", name);
         return NULL;
     }
     table_metadata_t table = {0};
@@ -30,26 +30,26 @@ void free_database(database_t* database) {
     }
 }
 
-int save_database(database_t* database) {
+int _save_database(database_t* database, const char* file, size_t line) {
     int defer_return_value = 0;
     if(database->count == 0) {
-        log_message(LOG_ERROR, "database is empty");
+        _log_message(LOG_ERROR, file, line, "database is empty");
         return -1;
     }
     FILE* fd = fopen(TABLE_METADATA_FILE, "w");
     if (fd == NULL) {
-        log_message(LOG_ERROR, "cannot open file");
+        _log_message(LOG_ERROR, file, line, "cannot open file");
         return_defer(-1);
     }
 
     if(fwrite(&database->count, sizeof(database->count), 1, fd) != 1) {
-        log_message(LOG_ERROR, "Cannot write table number");
+        _log_message(LOG_ERROR, file, line, "Cannot write table number");
         return_defer(-1);
     }
     
     for(size_t i = 0; i < database->count; i++) {
-        if(save_table_metadata(&database->items[i], fd) < 0) {
-            log_message(LOG_ERROR, "Cannot write table metadata");
+        if(_save_table_metadata(&database->items[i], fd, file, line) < 0) {
+            _log_message(LOG_ERROR, file, line, "Cannot write table metadata");
             return_defer(-1);
         }
     }
@@ -59,28 +59,28 @@ int save_database(database_t* database) {
         return defer_return_value;
 }
 
-int load_database(database_t* database) {
+int _load_database(database_t* database, const char* file, size_t line) {
     int defer_return_value = 0;
     if(database->count != 0) {
-        log_message(LOG_ERROR, "database destination is not empty");
+        _log_message(LOG_ERROR, file, line, "database destination is not empty");
         return -1;
     }
     FILE* fd = fopen(TABLE_METADATA_FILE, "r");
     if (fd == NULL) {
-        log_message(LOG_ERROR, "cannot open file");
+        _log_message(LOG_ERROR, file, line, "cannot open file");
         return_defer(-1);
     }
 
     size_t nb_tables;
     if(fread(&nb_tables, sizeof(nb_tables), 1, fd) != 1) {
-        log_message(LOG_ERROR, "Cannot write table number");
+        _log_message(LOG_ERROR, file, line, "Cannot write table number");
         return_defer(-1);
     }
     
     for(size_t i = 0; i < nb_tables; i++) {
         table_metadata_t table = {0};
-        if(load_table_metadata(&table, fd) < 0) {
-            log_message(LOG_ERROR, "Cannot write table metadata");
+        if(_load_table_metadata(&table, fd, file, line) < 0) {
+            _log_message(LOG_ERROR, file, line, "Cannot write table metadata");
             return_defer(-1);
         }
         list_append(database, table);
