@@ -1,4 +1,5 @@
 #!/bin/bash
+mkdir build 2> /dev/null
 for f in ./exemples/*.c
 do
     filename=$(basename -- "$f")

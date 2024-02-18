@@ -189,7 +189,6 @@ int _load_rows(row_list_t* row_list, table_metadata_t* table, const char* file, 
         return defer_return_value;
 }
 
-// TODO : handle error using defer
 int _insert_rows(row_list_t* row_list, const char* file, size_t line) {
     int defer_return_value = 0;
     FILE* fd = NULL;
@@ -200,10 +199,6 @@ int _insert_rows(row_list_t* row_list, const char* file, size_t line) {
     
     if(access(name_buffer, F_OK) == 0) {
         fd = fopen(name_buffer, "r+b");
-        if(fseek(fd, 0, SEEK_SET) < 0) {
-            _log_message(LOG_ERROR, file, line, "Cannot fseek in file\n");
-            return_defer(-1);
-        }
         size_t nb_row_in_file;
         if(fread(&nb_row_in_file, sizeof(nb_row_in_file), 1, fd) != 1) {
             _log_message(LOG_ERROR, file, line, "Cannot read in file\n");
