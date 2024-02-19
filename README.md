@@ -8,8 +8,9 @@ mini sgbd for education purposes
  - [x] Proper logging system 
  - [x] Save/load all data from a given table
  - [x] Handle file position of error for functions
- - [ ] Handle file integrity on insert/save errors
+ - [ ] Organize data in a block architecture like postgres
  - [ ] Basic query system lib
+ - [ ] Handle file integrity on insert/save errors (will be made at the same time than block architecture implementation)
  - [ ] Basic constraints for fields
  - [ ] Basic SQL client to create table and query data
  
@@ -39,4 +40,6 @@ table 'Person' (
 ```
 
 # Documentation
+
+## Block representation of data
 There is no documentation right now but you can check the exemple in exemples folder
