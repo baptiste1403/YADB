@@ -54,6 +54,7 @@ dkms.conf
 
 # YADB files
 *.yadb
+*.block
 
 # vscode config
 .vscode/

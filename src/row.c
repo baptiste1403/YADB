@@ -102,7 +102,7 @@ int _put_integer(row_list_t* row_list, size_t index, const char* field, uint64_t
 
 int _put_string(row_list_t* row_list, size_t index, const char* field, const char* data, const char* file, size_t line) {
     type_t type = row_list->table->items[get_field_index(row_list->table, field)].type;
-    size_t size = row_list->table->items[get_field_index(row_list->table, field)].size-1; // -1 for '\0'
+    size_t size = row_list->table->items[get_field_index(row_list->table, field)].size;
     if(index >= row_list->count) {
         _log_message(LOG_ERROR, file, line, "row index out of range");
         return -1;
@@ -114,7 +114,7 @@ int _put_string(row_list_t* row_list, size_t index, const char* field, const cha
     if(data_size > size) {
         _log_message(LOG_ERROR, file, line, "Cannot put string of size '%lu' in field of size '%lu'\n", data_size, size);
     }
-    return _put_data_from_name(row_list, index, field, data, data_size+1, file, line); // add the '\0'
+    return _put_data_from_name(row_list, index, field, data, data_size, file, line);
 }
 
 int _get_integer(row_list_t* row_list, size_t index, const char* field, uint64_t* data, const char* file, size_t line) {
@@ -135,9 +135,9 @@ int _get_integer(row_list_t* row_list, size_t index, const char* field, uint64_t
     return 0;
 }
 
-int _get_string(row_list_t* row_list, size_t index, const char* field, char* data, size_t data_size, const char* file, size_t line) {
+int _get_string(row_list_t* row_list, size_t index, const char* field, char* buffer, size_t buffer_size, const char* file, size_t line) {
     type_t type = row_list->table->items[get_field_index(row_list->table, field)].type;
-    size_t size = row_list->table->items[get_field_index(row_list->table, field)].size; // -1 for '\0'
+    size_t size = row_list->table->items[get_field_index(row_list->table, field)].size;
     if(index >= row_list->count) {
         _log_message(LOG_ERROR, file, line, "row index out of range");
         return -1;
@@ -147,14 +147,14 @@ int _get_string(row_list_t* row_list, size_t index, const char* field, char* dat
     }
     char* data_ptr = NULL;
     int res_code = _get_data_ptr_from_name(row_list, index, field, &data_ptr, file, line);
-    if(data_size < size) {
+    if(buffer_size < (size + 1)) {
         _log_message(LOG_WARN, file, line, "Destination buffer is smaller than the field, it may lead to truncated data");
     }
-    strncpy(data, data_ptr, data_size);
+    strncpy(buffer, data_ptr, buffer_size-1); // for \0 ???
     return res_code;
 }
 
-int _load_rows(row_list_t* row_list, table_metadata_t* table, const char* file, size_t line) {
+int _load_rows_block(row_list_t* row_list, table_metadata_t* table, const char* file, size_t line) {
     int defer_return_value = 0;
     FILE* fd = NULL;
     char name_buffer[TABLE_NAME_SIZE + 5];
@@ -163,73 +163,117 @@ int _load_rows(row_list_t* row_list, table_metadata_t* table, const char* file, 
     strcat(name_buffer, ".yadb");
 
     row_list->table = table;
-
     fd = fopen(name_buffer, "r");
 
-    size_t row_count;
-    if(fread(&row_count, sizeof(row_count), 1, fd) != 1) {
+    uint32_t block_count;
+    if(fread(&block_count, sizeof(uint32_t), 1, fd) != 1) {
         _log_message(LOG_ERROR, file, line, "Cannot read in file\n");
         return_defer(-1);
     }
 
-    for(size_t i = 0; i < row_count; i++) {
-        row_t row = _create_row(row_list->table, file, line);
-        if(fread(row.data, row_list->table->row_size, 1, fd) != 1) {
+    block_t block_buffer = {0};
+
+    for(size_t i = 0; i < block_count; i++) {
+        if(fread(&block_buffer, sizeof(block_t), 1, fd) != 1) {
             _log_message(LOG_ERROR, file, line, "Cannot read in file\n");
             return_defer(-1);
         }
-        list_append(row_list, row);
+
+        for(size_t j = 0; j < block_buffer.header.nb_rows; j++) {
+            row_t row = _create_row(row_list->table, file, line);
+            tuple_view_t tuple;
+            block_get_tuple_view(&block_buffer, j, &tuple);
+            memcpy(row.data, tuple.data, tuple.header.size);
+            list_append(row_list, row);
+        }
     }
 
     defer:
-        if(defer_return_value == -1) {
-            free_row_list(row_list);
-        }
         fclose(fd);
         return defer_return_value;
 }
 
-int _insert_rows(row_list_t* row_list, const char* file, size_t line) {
+int _insert_rows_block(row_list_t* row_list, const char* file, size_t line) {
     int defer_return_value = 0;
     FILE* fd = NULL;
     char name_buffer[TABLE_NAME_SIZE + 5];
 
     strcpy(name_buffer, row_list->table->name);
     strcat(name_buffer, ".yadb");
-    
+
+    block_t block_buffer = {0};
+    uint32_t nb_blocks = 0;
+
+    block_reset(&block_buffer);
+
     if(access(name_buffer, F_OK) == 0) {
         fd = fopen(name_buffer, "r+b");
-        size_t nb_row_in_file;
-        if(fread(&nb_row_in_file, sizeof(nb_row_in_file), 1, fd) != 1) {
-            _log_message(LOG_ERROR, file, line, "Cannot read in file\n");
+        if(fread(&nb_blocks, sizeof(uint32_t), 1, fd) != 1) {
+            _log_message(LOG_ERROR, file, line, "Cannot read from file\n");
             return_defer(-1);
         }
-        if(fseek(fd, 0, SEEK_SET) < 0) {
-            _log_message(LOG_ERROR, file, line, "Cannot fseek in file\n");
-            return_defer(-1);
-        }
-        nb_row_in_file += row_list->count;
-        if(fwrite(&nb_row_in_file, sizeof(nb_row_in_file), 1, fd) != 1) {
-            _log_message(LOG_ERROR, file, line, "Cannot write in file\n");
-            return_defer(-1);
-        }
-        if(fseek(fd, 0, SEEK_END) < 0) {
-            _log_message(LOG_ERROR, file, line, "Cannot fseek in file\n");
-            return_defer(-1);
+        if(nb_blocks > 0) {
+            if(fseek(fd, sizeof(uint32_t) +(nb_blocks - 1)*BLOCK_SIZE, SEEK_SET) < 0) {
+                _log_message(LOG_ERROR, file, line, "Cannot fseek in file\n");
+                return_defer(-1);
+            }
+            if(fread(&block_buffer, sizeof(block_t), 1, fd) != 1) {
+                _log_message(LOG_ERROR, file, line, "Cannot read from file\n");
+                return_defer(-1);
+            }
+        } else {
+            fd = fopen(name_buffer, "w");
+            if(fwrite(&nb_blocks, sizeof(uint32_t), 1, fd) != 1) {
+                _log_message(LOG_ERROR, file, line, "Cannot write in file\n");
+                return_defer(-1);
+            }
+            nb_blocks = 1;
         }
     } else {
         fd = fopen(name_buffer, "w");
-        if(fwrite(&row_list->count, sizeof(row_list->count), 1, fd) != 1) {
+        if(fwrite(&nb_blocks, sizeof(uint32_t), 1, fd) != 1) {
             _log_message(LOG_ERROR, file, line, "Cannot write in file\n");
+            return_defer(-1);
+        }
+        nb_blocks = 1;
+    }
+
+    for(size_t i = 0; i < row_list->count; i++) {
+        if(block_get_remain(&block_buffer) < row_list->table->row_size) {
+            if(fseek(fd, sizeof(uint32_t) + (nb_blocks-1)*BLOCK_SIZE, SEEK_SET) < 0) {
+                _log_message(LOG_ERROR, file, line, "Cannot fseek in file\n");
+                return_defer(-1);
+            }
+            if(fwrite(&block_buffer, sizeof(block_t), 1, fd) != 1) {
+                _log_message(LOG_ERROR, file, line, "Cannot write in file\n");
+                return_defer(-1);
+            }
+            nb_blocks++;
+            block_reset(&block_buffer);
+        }
+
+        if(block_put_tuple(&block_buffer, row_list->items[i].data, row_list->table->row_size) != 0) {
+            _log_message(LOG_ERROR, file, line, "Cannot add tuple to block\n");
             return_defer(-1);
         }
     }
 
-    for(size_t i = 0; i < row_list->count; i++) {
-        if(fwrite(row_list->items[i].data, row_list->table->row_size, 1, fd) != 1) {
-            _log_message(LOG_ERROR, file, line, "Cannot write in file\n");
-            return_defer(-1);
-        }
+    if(fseek(fd, sizeof(uint32_t) + (nb_blocks-1)*BLOCK_SIZE, SEEK_SET) < 0) {
+        _log_message(LOG_ERROR, file, line, "Cannot fseek in file\n");
+        return_defer(-1);
+    }
+    if(fwrite(&block_buffer, sizeof(block_t), 1, fd) != 1) {
+        _log_message(LOG_ERROR, file, line, "Cannot write in file\n");
+        return_defer(-1);
+    }
+
+    if(fseek(fd, 0, SEEK_SET) < 0) {
+        _log_message(LOG_ERROR, file, line, "Cannot fseek in file\n");
+        return_defer(-1);
+    }
+    if(fwrite(&nb_blocks, sizeof(uint32_t), 1, fd) != 1) {
+        _log_message(LOG_ERROR, file, line, "Cannot write in file\n");
+        return_defer(-1);
     }
 
     defer:

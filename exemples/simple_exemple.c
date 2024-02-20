@@ -24,16 +24,20 @@ int main(int argc, char **argv) {
     row_list.table = get_table(&database, "person");
     add_row(&row_list);
     add_row(&row_list);
+    add_row(&row_list);
 
     log_message(LOG_INFO, "create and dump items :\n");
 
     // this is bad, you must verify return type !!!
     put_string(&row_list, 0, "name", "Jean BON");
     put_string(&row_list, 1, "name", "Guy LIGUILY");
+    put_string(&row_list, 2, "name", "Laureen LESAGE");
     put_integer(&row_list, 0, "age", 35);
     put_integer(&row_list, 1, "age", 47);
+    put_integer(&row_list, 2, "age", 22);
     put_integer(&row_list, 0, "id", 0);
     put_integer(&row_list, 1, "id", 1);
+    put_integer(&row_list, 2, "id", 2);
 
     //dump_rows(person_row, 2);
 

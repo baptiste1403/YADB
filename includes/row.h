@@ -12,6 +12,7 @@
 #include "list.h"
 #include "defer.h"
 #include "errno.h"
+#include "block.h"
 
 #define TABLE_NAME_SIZE 30
 
@@ -43,11 +44,13 @@ int _get_string(row_list_t* row_list, size_t index, const char* field, char* dat
 
 void dump_rows(row_list_t* row_list);
 
+int _insert_rows_block(row_list_t* row_list, const char* file, size_t line);
 int _insert_rows(row_list_t* row_list, const char* file, size_t line);
-#define insert_rows(row_list) _insert_rows(row_list, __FILE__, __LINE__)
+#define insert_rows(row_list) _insert_rows_block(row_list, __FILE__, __LINE__)
 
+int _load_rows_block(row_list_t* row_list, table_metadata_t* table, const char* file, size_t line);
 int _load_rows(row_list_t* row_list, table_metadata_t* table, const char* file, size_t line);
-#define load_rows(row_list, table) _load_rows(row_list, table, __FILE__, __LINE__)
+#define load_rows(row_list, table) _load_rows_block(row_list, table, __FILE__, __LINE__)
 
 int _add_row(row_list_t* row_list, const char* file, size_t line);
 #define add_row(row_list) _add_row(row_list, __FILE__, __LINE__);
