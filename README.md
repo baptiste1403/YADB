@@ -9,8 +9,10 @@ mini sgbd for education purposes
  - [x] Save/load all data from a given table
  - [x] Handle file position of error for functions
  - [ ] Organize data in a block architecture like postgres
- - [ ] Basic query system lib
- - [ ] Handle file integrity on insert/save errors (will be made at the same time than block architecture implementation)
+ - [ ] Change api to have a more abstract way of inserting and getting data (data with fixed and dynamic size + add a map between data type and size)
+   - [ ] Rework structure of rows 
+ - [ ] Basic query system lib (insert, get, remove, update)
+ - [ ] Adding simple constraint system (primary keys, not null, etc...)
  - [ ] Basic constraints for fields
  - [ ] Basic SQL client to create table and query data
  
@@ -40,6 +42,16 @@ table 'Person' (
 ```
 
 # Documentation
+There is no documentation on how to use the library right now but you can check the exemple in exemples folder
 
-## Block representation of data
-There is no documentation right now but you can check the exemple in exemples folder
+## Architecture of a BLock of data
+
+### header attributes
+ - number of rows : u16
+ - start of row pointers : u16
+ - end of rows : u16
+
+### representation of a block
+
+[ number of rows | start of row pointers | end of row pointers | end of rows |
+row ptr | row ptr | ... | ---->          ...         <---- | ... | row | row ]
