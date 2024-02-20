@@ -54,5 +54,5 @@ There is no documentation on how to use the library right now but you can check 
 
 ### representation of a block
 
-[ number of rows | start of row pointers | end of row pointers | end of rows |
+[ number of rows | start of row pointers | end of row pointers | end of rows |  
 row ptr | row ptr | ... | ---->          ...         <---- | ... | row | row ]
