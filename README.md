@@ -8,7 +8,7 @@ mini sgbd for education purposes
  - [x] Proper logging system 
  - [x] Save/load all data from a given table
  - [x] Handle file position of error for functions
- - [ ] Organize data in a block architecture like postgres
+ - [x] Organize data in a block architecture like postgres
  - [ ] Change api to have a more abstract way of inserting and getting data (data with fixed and dynamic size + add a map between data type and size)
    - [ ] Rework structure of rows 
  - [ ] Basic query system lib (insert, get, remove, update)
