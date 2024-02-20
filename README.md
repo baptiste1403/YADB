@@ -48,11 +48,10 @@ There is no documentation on how to use the library right now but you can check 
 
 ### header attributes
  - number of rows : u16
- - start of row pointers : u16
  - end of row pointers : u16
  - end of rows : u16
 
 ### representation of a block
 
-[ number of rows | start of row pointers | end of row pointers | end of rows |  
+[ number of rows | end of row pointers | end of rows |  
 row ptr | row ptr | ... | ---->          ...         <---- | ... | row | row ]
